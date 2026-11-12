@@ -87,6 +87,47 @@ def convertir(texte: str, dossier: str, anims: dict) -> str:
     return f'{fmt}dir "{dossier}"\n' + "\n".join(lignes) + "\n", fmt
 
 
+def os_racine(fichier: Path) -> str:
+    """Nom du premier os sans parent d'un maillage md5mesh ou iqm."""
+    if fichier.suffix == ".md5mesh":
+        m = re.search(r'joints\s*\{\s*"([^"]+)"\s+-1', fichier.read_text(errors="replace"))
+        return m.group(1)
+    import struct
+    d = fichier.read_bytes()
+    h = struct.unpack("<16s27I", d[:124])
+    ofs_text, num_joints, ofs_joints = h[5], h[14], h[15]
+    for j in range(num_joints):
+        nom, parent = struct.unpack("<Ii", d[ofs_joints + j * 48:ofs_joints + j * 48 + 8])
+        if parent < 0:
+            debut = ofs_text + nom
+            return d[debut:d.index(b"\0", debut)].decode()
+    raise SystemExit(f"{fichier} : pas d'os racine")
+
+
+def attacher(texte: str, racine: Path) -> str:
+    """Modèle attaché à un autre (arme dans la main) : notre moteur ignore alors mdlyaw, mdlpitch et mdlroll ;
+    on les applique à l'os racine (commande adjust), juste après le chargement et avant les animations."""
+    angles = {k: 0.0 for k in ("yaw", "pitch", "roll")}
+    lignes = []
+    for ligne in texte.splitlines():
+        m = re.match(r"^mdl(yaw|pitch|roll)\s+(-?[\d.]+)", ligne)
+        if m:
+            angles[m.group(1)] = float(m.group(2))
+        else:
+            lignes.append(ligne)
+    if not any(angles.values()):
+        return texte
+    dossier = re.match(r'^(\w+)dir "([^"]+)"', lignes[0])
+    fmt = dossier.group(1)
+    for i, ligne in enumerate(lignes):
+        m = re.match(rf'^{fmt}load\s+"?([^"\s]+)"?', ligne)
+        if m:
+            os_ = os_racine((racine / "packages/models" / dossier.group(2) / m.group(1)).resolve())
+            lignes.insert(i + 1, f'{fmt}adjust "{os_}" {angles["yaw"]:g} {angles["pitch"]:g} {angles["roll"]:g}')
+            break
+    return "\n".join(lignes) + "\n"
+
+
 def ecrire_cfg(racine: Path, nom: str, texte: str, fmt: str):
     f = racine / "packages/models" / nom / f"{fmt}.cfg"
     f.parent.mkdir(parents=True, exist_ok=True)
@@ -123,6 +164,21 @@ mdltrans -0.22 0.2 -0.22
 # Red Eclipse tourne ce modèle de 90° (mdlyaw 90) ; notre moteur le fait déjà (fpsgame/render.cpp, d->yaw+90).
 
 
+def elaguer(racine: Path):
+    """Retire les fichiers des armes qu'aucun réglage n'utilise (niveaux de détail, textures DDS...)."""
+    modeles = racine / "packages/models"
+    utilises = set()
+    for cfg in modeles.rglob("*.cfg"):
+        texte = cfg.read_text(encoding="utf-8")
+        dossier = re.search(r'^\w+dir "([^"]+)"', texte, re.M)
+        base = modeles / dossier.group(1) if dossier else cfg.parent
+        for nom in re.findall(r'"?([\w./-]+\.(?:iqm|md5mesh|md5anim|png|jpg|obj))"?', texte):
+            utilises.add((base / nom).resolve())
+    for f in (modeles / "g2e/armes").rglob("*"):
+        if f.is_file() and f.suffix != ".txt" and f.resolve() not in utilises:
+            f.unlink()
+
+
 def armes(racine: Path, re_armes: Path):
     for cube, re_nom in ARMES.items():
         src = re_armes / re_nom
@@ -134,11 +190,11 @@ def armes(racine: Path, re_armes: Path):
             ecrire_cfg(racine, nom, mains(cube), "iqm")
         texte, fmt = convertir(hwep, f"g2e/armes/{re_nom}/hwep",
                                {re_nom: "gun idle", f"{re_nom} primary": "gun shoot"})
-        ecrire_cfg(racine, f"g2e/hud/{cube}/arme", texte, fmt)
+        ecrire_cfg(racine, f"g2e/hud/{cube}/arme", attacher(texte, racine), fmt)
         # arme portée par les autres joueurs
         texte, fmt = convertir(vwep, f"g2e/armes/{re_nom}/vwep",
                                {re_nom: "vwep idle", f"{re_nom} primary": "vwep shoot"})
-        ecrire_cfg(racine, f"vwep/{cube}", texte, fmt)
+        ecrire_cfg(racine, f"vwep/{cube}", attacher(texte, racine), fmt)
     # munitions : le modèle de l'arme, qui tourne au sol
     for cube, re_nom in MUNITIONS.items():
         item = (re_armes / re_nom / "item").glob("*.cfg").__next__().read_text()
@@ -150,8 +206,9 @@ def armes(racine: Path, re_armes: Path):
         cfg = next(proj.glob("*.cfg"))
         texte, fmt = convertir(cfg.read_text(), f"g2e/armes/{re_nom}/proj", {})
         ecrire_cfg(racine, f"projectiles/{cube}", texte, fmt)
+    elaguer(racine)
     for png in (racine / "packages/models/g2e/armes").rglob("*.png"):
-        reduire(png)
+        reduire(png, 256)
     for f in ("readme.txt", "cc-by-sa.txt"):
         shutil.copyfile(re_armes / f, racine / "packages/models/g2e/armes" / f)
 

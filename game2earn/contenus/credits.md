@@ -32,6 +32,19 @@ Chaque contenu publié avec le jeu, son auteur et sa licence. Tous permettent l'
   (`packages/sounds/re/readme.txt`, `packages/sounds/re/cc-by-sa.txt`). Fichiers repris sans modification.
   « Red Eclipse » est une marque de son projet : elle n'est citée ici que pour créditer ses auteurs.
 
+## Personnages et armes
+
+- **Personnages** (homme, femme, mains) et **armes** (scie, fusil à pompe, mitraillette, lance-roquettes, fusil de
+  précision, grenade, pistolet) : Red Eclipse, CC BY-SA 4.0 (`packages/models/g2e/joueur/readme.txt`,
+  `packages/models/g2e/armes/readme.txt`). Fusil de précision : « Unnamed » (Viktor Hahn) et Slawomir « Q009 »
+  Blauciak, CC BY-SA 3.0 ; munitions : Ricky Thomson, CC BY-SA 4.0. **Modifiés pour Game2Earn** (réglages convertis
+  pour le moteur Cube 2, personnages colorés, textures réduites), sous la même licence CC BY-SA 4.0.
+
+## Objets
+
+- Soins, bonus, armures, dégâts quadruplés, téléporteur, drapeaux, débris : modelés pour Game2Earn par programme
+  (`game2earn/contenus/objets.py`). Domaine public (CC0).
+
 ## Exclus (licence non commerciale)
 
 Cartes, armes, personnages, objets, sons et habillage des menus de Sauerbraten ; textures `aftas` et `lunaran`

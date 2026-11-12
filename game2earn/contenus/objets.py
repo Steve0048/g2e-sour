@@ -59,7 +59,8 @@ class Maillage:
             self.tri((cx, cy, z1), (bx, by, z1), (ax, ay, z1), ((0.5, 0.5), (1, 0), (0, 0)))
 
     def ecrire(self, chemin: Path):
-        lignes = [f"v {x:.4f} {y:.4f} {z:.4f}" for x, y, z in self.v]
+        # axes de l'OBJ : notre moteur lit (x, y, z) comme (z, -x, y) (engine/obj.h)
+        lignes = [f"v {-y:.4f} {z:.4f} {x:.4f}" for x, y, z in self.v]
         lignes += [f"vt {u:.4f} {v:.4f}" for u, v in self.t]
         lignes += ["f " + " ".join(f"{a + 1}/{b + 1}" for a, b in f) for f in self.f]
         chemin.write_text("\n".join(lignes) + "\n")
@@ -91,6 +92,7 @@ def bouclier(r=4.0, h=1.4):
     pts = [(r * math.cos(a), r * 1.15 * math.sin(a)) for a in [math.radians(90 + k * 45) for k in range(8)]]
     m = Maillage()
     m.prisme(pts, -h / 2, h / 2)
+    m.v = [(x, z, y + r * 1.2) for x, y, z in m.v]  # debout, posé au sol
     return m
 
 
@@ -140,8 +142,8 @@ def objets(racine: Path):
     m.boite(-4, -4, 0, 4, 4, 6.5)
     modele(racine, "boost", m, (40, 44, 56), "croix", JAUNE, tourne)
     # armures : boucliers
-    modele(racine, "armor/green", bouclier(), VERT, "bandes", (30, 120, 60), "mdltrans 0 0 4\n")
-    modele(racine, "armor/yellow", bouclier(), JAUNE, "bandes", (160, 120, 20), "mdltrans 0 0 4\n")
+    modele(racine, "armor/green", bouclier(), VERT, "bandes", (30, 120, 60))
+    modele(racine, "armor/yellow", bouclier(), JAUNE, "bandes", (160, 120, 20))
     # dégâts quadruplés : octaèdre violet
     modele(racine, "quad", octaedre(), VIOLET, "bandes", (110, 50, 200), "mdltrans 0 0 4\nmdlspin 90\n")
     # téléporteur : anneau
