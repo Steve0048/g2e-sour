@@ -1,4 +1,6 @@
 import styled from '@emotion/styled'
+import { demarrerManette } from './manette'
+import { g2eActif, g2eEditeur, g2eMenus, g2eSurCarte, g2eSurConnecteur, g2eSurPret } from './g2e'
 import { useResizeDetector } from 'react-resize-detector'
 import start from './unsafe-startup'
 import CBOR from 'cbor-js'
@@ -157,6 +159,33 @@ async function playDemoURL(url: string, reference: string) {
   }
 }
 
+/** Game2Earn : un WebSocket qui ne s'ouvre qu'à la demande (connect), même interface pour le reste du client. */
+class LazySocket {
+  binaryType: BinaryType = 'arraybuffer'
+  onopen: ((e: Event) => void) | null = null
+  onmessage: ((e: MessageEvent) => void) | null = null
+  onclose: ((e: CloseEvent) => void) | null = null
+  private ws: WebSocket | null = null
+
+  get readyState(): number {
+    return this.ws?.readyState ?? WebSocket.CONNECTING
+  }
+
+  connect(url: string) {
+    if (this.ws != null) this.ws.close()
+    const ws = new WebSocket(url)
+    ws.binaryType = this.binaryType
+    ws.onopen = (e) => this.onopen?.(e)
+    ws.onmessage = (e) => this.onmessage?.(e)
+    ws.onclose = (e) => this.onclose?.(e)
+    this.ws = ws
+  }
+
+  send(data: ArrayBuffer) {
+    this.ws?.send(data)
+  }
+}
+
 function App() {
   const [state, setState] = React.useState<GameState>({
     type: GameStateType.PageLoading,
@@ -261,6 +290,10 @@ function App() {
       let mods: string[] = getInstalledMods()
       if (parsedParams.has('safemode')) {
         mods = []
+      }
+      // Game2Earn : l'éditeur de l'admin propose toutes les textures des cartes.
+      if (g2eEditeur()) {
+        mods = [...mods.filter((m) => m !== 'textures'), 'textures']
       }
       if (parsedParams.has('mods')) {
         const urlMods = parsedParams.get('mods')
@@ -375,6 +408,12 @@ function App() {
   React.useEffect(() => {
     if (state.type !== GameStateType.Ready) return
 
+    // Game2Earn : nos menus, en français et réduits (g2e.ts).
+    if (g2eActif()) {
+      BananaBread.execute(g2eMenus())
+      return
+    }
+
     const menu = `
     newgui discord [
         guibutton "copy authkey command.." [js "Module.discord.copyKey()"]
@@ -441,10 +480,12 @@ function App() {
     const [serverURL] = CONFIG.servers
 
     const { protocol, host } = window.location
-    const ws = new WebSocket(
-      `${protocol === 'https:' ? 'wss://' : 'ws:/'}${serverURL}`
-    )
-    ws.binaryType = 'arraybuffer'
+    // Game2Earn : le serveur du match n'est connu qu'au départ du défi (g2e.ts) ; le WebSocket s'ouvre alors.
+    const ws = new LazySocket()
+    if (serverURL != null) {
+      ws.connect(`${protocol === 'https:' ? 'wss://' : 'ws:/'}${serverURL}`)
+    }
+    g2eSurConnecteur((url) => ws.connect(url))
 
     ws.onopen = () => {
       const { current: queue } = wsQueue
@@ -454,7 +495,7 @@ function App() {
       }
     }
 
-    wsRef.current = ws
+    wsRef.current = ws as unknown as WebSocket
 
     const runCommand = async (command: string) => {
       const generate = (): number => Math.floor(Math.random() * 2048)
@@ -576,6 +617,15 @@ function App() {
 
       Module.running = true
       setResolution(null, null)
+      // Game2Earn : la plateforme pilote le jeu (pas d'adresse dans l'URL, pas de compte Discord).
+      if (g2eActif()) {
+        setState({
+          type: GameStateType.Ready,
+        })
+        g2eSurPret()
+        demarrerManette()
+        return
+      }
       setState({
         type: GameStateType.Ready,
       })
@@ -672,6 +722,8 @@ function App() {
     }
 
     Module.loadedMap = (name: string) => {
+      g2eSurCarte(name)
+      if (g2eActif()) return
       if (remoteConnected) return
       pushURLState(`#/map/${name}`)
     }

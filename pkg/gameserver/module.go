@@ -67,6 +67,9 @@ type Server struct {
 	KeepTeams       bool
 	CompetitiveMode bool
 	ReportStats     bool
+
+	// Game2Earn : match à places réservées (g2e.go) ; nil pour les autres serveurs.
+	G2E *G2EHooks
 }
 
 func New(ctx context.Context, conf *Config) *Server {
@@ -261,6 +264,13 @@ func (s *Server) TryJoin(c *Client, name string, playerModel int32, authDomain, 
 	}
 
 	c.Name = name
+	if s.G2E != nil && s.G2E.Place != nil {
+		nom, _, ok := s.G2E.Place(c.SessionID)
+		if !ok {
+			return
+		}
+		c.Name = nom
+	}
 	c.Model = playerModel
 	s.Join(c)
 }
@@ -279,6 +289,11 @@ func (s *Server) Join(c *Client) {
 
 	if teamedMode, ok := s.GameMode.(game.TeamMode); ok {
 		teamedMode.Join(&c.Player) // may set client's team
+		if s.G2E != nil && s.G2E.Place != nil {
+			if _, equipe, ok := s.G2E.Place(c.SessionID); ok && equipe != "" && c.Team.Name != equipe {
+				teamedMode.ChangeTeam(&c.Player, equipe, true)
+			}
+		}
 	}
 	s.SendWelcome(c) // tells client about her team
 	if flagMode, ok := s.GameMode.(game.FlagMode); ok {
@@ -389,6 +404,18 @@ func (s *Server) Empty() {
 
 func (s *Server) Intermission() {
 	s.Clock.Stop()
+
+	if s.G2E != nil {
+		// Game2Earn : la fin du match ; pendant l'échauffement, la même carte recommence.
+		if s.G2E.Fin != nil {
+			s.G2E.Fin(s.g2eResultat())
+			return
+		}
+		s.pendingMapChange = time.AfterFunc(5*time.Second, func() {
+			s.StartGame(s.StartMode(s.GameMode.ID()), s.Map)
+		})
+		return
+	}
 
 	allMaps := make([]string, 0)
 	allMaps = append(allMaps, s.Maps...)
@@ -530,7 +557,8 @@ func (s *Server) HandleShoot(client *Client, wpn weapon.Weapon, id int32, from, 
 				target.State != playerstate.Alive ||
 				target.LifeSequence != h.lifeSequence ||
 				h.rays < 1 ||
-				h.distance > wpn.Range+1.0 {
+				h.distance > wpn.Range+1.0 ||
+				!s.g2eSurLaLigne(client, target, from, to) {
 				continue
 			}
 

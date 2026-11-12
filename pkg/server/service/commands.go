@@ -235,6 +235,9 @@ func (s *Cluster) registerCommands() {
 		ArgFormat:   "[name|id|alias]",
 		Description: "move to a space, server, or map by name, id, or alias",
 		Callback: func(ctx context.Context, user *User, target string) error {
+			if s.g2e != nil {
+				return s.g2eRejoindre(user)
+			}
 			for _, gameServer := range s.servers.Servers {
 				if !gameServer.IsReference(target) {
 					continue

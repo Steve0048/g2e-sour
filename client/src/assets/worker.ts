@@ -180,7 +180,9 @@ async function loadIndex(
     }
 
     // Memory-saving on mobile
-    if (BROWSER.isMobile) {
+    // Game2Earn : désactivé. Le jeu a besoin de ses paquets (base, fps) à chaque visite : sur téléphone, un index déjà
+    // en cache les perdait et le jeu ne démarrait plus.
+    if (false && BROWSER.isMobile) {
       const skipBundles: Set<string> = new Set()
       for (const mod of source.mods) {
         skipBundles.add(mod.id)

@@ -35,6 +35,10 @@ type Client struct {
 	connected chan bool
 	outgoing  Outgoing
 
+	// Game2Earn : cadence des tirs et projectiles en vol (g2e.go)
+	g2eProchainTir time.Time
+	g2eProjectiles map[int32]projectile
+
 	server *Server
 }
 
@@ -44,6 +48,7 @@ func NewClient(cn uint32, sessionId uint32, outgoing Outgoing) *Client {
 		SessionID:       sessionId,
 		Authentications: map[string]*Authentication{},
 		outgoing:        outgoing,
+		g2eProjectiles:  map[int32]projectile{},
 	}
 }
 

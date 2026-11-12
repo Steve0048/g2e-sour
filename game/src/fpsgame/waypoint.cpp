@@ -686,6 +686,87 @@ namespace ai
         return true;
     }
 
+    // Game2Earn : points de passage créés tout seuls pour une carte qui n'en a pas (cartes dessinées par l'admin).
+    // Depuis chaque point de départ et chaque objet, on avance par pas de WPSTEP sur le sol, dans 8 directions :
+    // le passage doit être libre à hauteur du corps, le sol trouvé sous le pas (marche de WPCLIMB au plus, chute de
+    // WPDROP au plus), sans lave ni zone mortelle. On revient en arrière si la marche se remonte.
+    static const int WPSTEP = 16, WPCLIMB = 18, WPDROP = 96, WPBODY = 14;
+
+    static bool solsous(const vec &haut, float maxd, vec &sol)
+    {
+        float d = raycube(haut, vec(0, 0, -1), maxd, RAY_CLIPMAT|RAY_POLY);
+        if(d >= maxd || d <= 0) return false;
+        sol = vec(haut).sub(vec(0, 0, d - 1));
+        int mat = lookupmaterial(sol);
+        if((mat&MATF_VOLUME) == MAT_LAVA || mat&MAT_DEATH || (mat&MATF_CLIP) == MAT_CLIP) return false;
+        // de la place au-dessus pour un joueur
+        if(raycube(vec(sol).add(vec(0, 0, 1)), vec(0, 0, 1), WPBODY + 2, RAY_CLIPMAT|RAY_POLY) < WPBODY + 2) return false;
+        return true;
+    }
+
+    static hashtable<uint, int> wpvus;
+    static vector<int> wpfile;
+
+    static uint wpcle(const vec &o)
+    {
+        return (uint(o.x / WPSTEP) & 0x3FF) | ((uint(o.y / WPSTEP) & 0x3FF) << 10) | ((uint(max(o.z, 0.0f) / 12) & 0xFFF) << 20);
+    }
+
+    static int wpajouter(const vec &o)
+    {
+        uint k = wpcle(o);
+        int *deja = wpvus.access(k);
+        if(deja) return *deja;
+        int n = addwaypoint(o);
+        if(n < 0) return -1;
+        wpvus[k] = n;
+        wpfile.add(n);
+        return n;
+    }
+
+    void genwaypoints()
+    {
+        static const int dirs[8][2] = { {1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {1,-1}, {-1,1}, {-1,-1} };
+        clearwaypoints(false);
+        addwaypoint(vec(0, 0, 0));
+        wpvus.clear();
+        wpfile.setsize(0);
+        loopv(entities::ents)
+        {
+            extentity &e = *entities::ents[i];
+            if(e.type != PLAYERSTART && e.type != FLAG && e.type != TELEPORT && e.type != JUMPPAD && !(e.type >= I_SHELLS && e.type <= I_QUAD)) continue;
+            vec sol;
+            if(solsous(vec(e.o).add(vec(0, 0, 4)), 128, sol)) wpajouter(sol);
+        }
+        for(int t = 0; t < wpfile.length() && waypoints.length() < 12000; t++)
+        {
+            int n = wpfile[t];
+            vec o = waypoints[n].o;
+            loopk(8)
+            {
+                vec dir(dirs[k][0], dirs[k][1], 0);
+                float pas = WPSTEP * dir.magnitude();
+                dir.normalize();
+                // le passage à hauteur de la taille et des genoux
+                vec taille = vec(o).add(vec(0, 0, WPBODY)), genoux = vec(o).add(vec(0, 0, WPCLIMB));
+                if(raycube(taille, dir, pas, RAY_CLIPMAT|RAY_POLY) < pas) continue;
+                if(raycube(genoux, dir, pas, RAY_CLIPMAT|RAY_POLY) < pas) continue;
+                vec haut = vec(genoux).add(vec(dir).mul(pas)), sol;
+                if(haut.x < 0 || haut.y < 0 || haut.x >= getworldsize() || haut.y >= getworldsize()) continue;
+                if(!solsous(haut, WPCLIMB + WPDROP, sol)) continue;
+                int m = wpajouter(sol);
+                if(m < 0 || m == n) continue;
+                linkwaypoint(waypoints[n], m);
+                if(sol.z - o.z <= WPCLIMB) linkwaypoint(waypoints[m], n);
+            }
+        }
+        wpvus.clear();
+        wpfile.setsize(0);
+        clearwpcache();
+        conoutf("Game2Earn : %d points de passage créés", waypoints.length() - 1);
+    }
+    ICOMMAND(genwaypoints, "", (), genwaypoints());
+
     void loadwaypoints(bool force, const char *mname)
     {
         string wptname;
@@ -693,9 +774,10 @@ namespace ai
         if(!force && (waypoints.length() || !strcmp(loadedwaypoints, wptname))) return;
 
         stream *f = opengzfile(wptname, "rb");
-        if(!f) return;
+        // Game2Earn : pas de fichier de points de passage, ils sont créés depuis la carte.
+        if(!f) { copystring(loadedwaypoints, wptname); genwaypoints(); return; }
         char magic[4];
-        if(f->read(magic, 4) < 4 || memcmp(magic, "OWPT", 4)) { delete f; return; }
+        if(f->read(magic, 4) < 4 || memcmp(magic, "OWPT", 4)) { delete f; copystring(loadedwaypoints, wptname); genwaypoints(); return; }
 
         copystring(loadedwaypoints, wptname);
 

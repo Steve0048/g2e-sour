@@ -1,5 +1,6 @@
 # Game2Earn : réglages du serveur de match (fusionnés avec ceux de Sour, pkg/config/schema.cue).
-# Les modes et le résultat des matchs Game2Earn viendront à l'étape 6 du plan (docs/sour-plan.md de la plateforme).
+# Le match de défi lui-même (places, mode, carte, durée, résultat) vient de la variable G2E_MATCH posée par le Worker
+# g2e-sour (pkg/server/service/g2e.go) ; les cartes de l'admin, de G2E_ASSETS.
 server:
   presets:
     - name: "ffa-duel"

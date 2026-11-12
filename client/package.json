@@ -8,7 +8,7 @@
   "scripts": {
     "serve": "./scripts/serve",
     "serve:site": "yarn run parcel watch --target package -p 1239",
-    "build": "yarn run parcel build --target default"
+    "build": "yarn run parcel build --target default --public-url ./"
   },
   "devDependencies": {
     "@types/node": "^18.7.4",

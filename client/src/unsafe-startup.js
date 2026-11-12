@@ -42,7 +42,7 @@ export default function start() {
       BananaBread.execute(`screenres ${width} ${height}`)
     },
     locateFile: (file) => {
-      if (file.endsWith('.wasm')) return `/game/${file}`
+      if (file.endsWith('.wasm')) return `game/${file}`
       return null
     },
     preRun: [],

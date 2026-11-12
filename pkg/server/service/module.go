@@ -49,6 +49,9 @@ type Cluster struct {
 	db      *gorm.DB
 	spaces  *verse.SpaceManager
 	assets  *assets.AssetFetcher
+
+	// Game2Earn : le match de défi de ce serveur (g2e.go), nil sinon.
+	g2e *G2EMatch
 }
 
 func NewCluster(

@@ -264,6 +264,9 @@ function GunButton(props: {
   const { ammo, weapon } = playerState
   const weaponAmmo = ammo[type]
 
+  // Game2Earn : seulement les armes que le joueur possède (la scie est toujours là).
+  if (weaponAmmo === 0 && type !== WeaponType.Saw) return null
+
   return (
     <GunElement
       disabled={weaponAmmo === 0}
@@ -506,17 +509,20 @@ export default function MobileControls(props: {
         >
           <span style={{ marginTop: -5 }}>⦿</span>
         </ActionButton>
-        <ActionButton
-          onTouchStart={startZoom}
-          active={zooming}
-          style={{
-            position: 'absolute',
-            bottom: 240,
-            right: 100,
-          }}
-        >
-          <span style={{ marginTop: -7 }}>⌖</span>
-        </ActionButton>
+        {/* Game2Earn : le zoom n'apparaît qu'avec le fusil de précision en main. */}
+        {playerState.weapon === WeaponType.Rifle && (
+          <ActionButton
+            onTouchStart={startZoom}
+            active={zooming}
+            style={{
+              position: 'absolute',
+              bottom: 240,
+              right: 100,
+            }}
+          >
+            <span style={{ marginTop: -7 }}>⌖</span>
+          </ActionButton>
+        )}
         {WEAPON_INFO.map((v) => (
           <GunButton
             key={v.type}

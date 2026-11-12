@@ -85,7 +85,8 @@ function fileExists(path: string): boolean {
 }
 
 export async function mountFile(path: string, data: Uint8Array): Promise<void> {
-  if (BROWSER.isMobile) {
+  // Game2Earn : seulement sur iPhone et iPad (lent là-bas) ; les autres téléphones gardent le son.
+  if (BROWSER.isMobile && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
     // This is really slow on iOS right now
     if (path.endsWith('.wav') || path.endsWith('.ogg')) {
       return

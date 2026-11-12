@@ -349,6 +349,7 @@ func (c *Cluster) PollUser(ctx context.Context, user *User) {
 
 			logger := user.Logger()
 			logger.Info().Msg("user disconnected")
+			c.g2eDepart(user)
 
 			user.DisconnectFromServer()
 			return

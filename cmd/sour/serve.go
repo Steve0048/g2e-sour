@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"os/signal"
 	"path/filepath"
 
@@ -79,6 +80,14 @@ func serveCommand(configs []string) error {
 				serverConfig.Assets,
 				"fs:"+source,
 			)
+		}
+	}
+
+	// Game2Earn : les cartes dessinées par l'admin, publiées par la plateforme (adresses de leur index, séparées par
+	// des virgules), en plus des paquets du jeu.
+	for _, source := range strings.Split(os.Getenv("G2E_ASSETS"), ",") {
+		if source = strings.TrimSpace(source); strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "http://") {
+			serverConfig.Assets = append(serverConfig.Assets, source)
 		}
 	}
 
@@ -180,7 +189,21 @@ func serveCommand(configs []string) error {
 	enet := make([]*ingress.ENetIngress, 0)
 	infoServices := make([]*servers.ServerInfoService, 0)
 	cluster.StartServers(ctx)
-	for _, enetConfig := range serverConfig.Ingress.Desktop {
+
+	// Game2Earn : un serveur lancé pour un match de défi (G2E_MATCH), sans entrée pour le jeu de bureau.
+	g2eMatch, err := service.LireG2EMatch()
+	if err != nil {
+		return err
+	}
+	desktop := serverConfig.Ingress.Desktop
+	if g2eMatch != nil {
+		if err := cluster.DemarrerG2E(ctx, g2eMatch); err != nil {
+			return err
+		}
+		desktop = nil
+	}
+
+	for _, enetConfig := range desktop {
 		enetIngress := ingress.NewENetIngress(newConnections)
 		enetIngress.Serve(enetConfig.Port)
 		enetIngress.InitialCommand = fmt.Sprintf("join %s", enetConfig.Target)

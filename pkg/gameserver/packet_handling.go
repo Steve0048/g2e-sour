@@ -96,6 +96,15 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, message P.Message
 		return
 	}
 
+	// Game2Earn : le match est réglé par la plateforme (nom, équipe, carte, mode) : rien de tout cela ne se change.
+	if s.G2E != nil {
+		switch packetType {
+		case P.N_ADDBOT, P.N_DELBOT, P.N_SETMASTER, P.N_KICK, P.N_MASTERMODE, P.N_SPECTATOR, P.N_MAPVOTE,
+			P.N_SWITCHNAME, P.N_SWITCHTEAM, P.N_SETTEAM, P.N_PAUSEGAME, P.N_EDITMODE:
+			return
+		}
+	}
+
 	switch packetType {
 
 	// channel 0 traffic
@@ -347,6 +356,11 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, message P.Message
 			return
 		}
 
+		if !s.g2eTirPossible(client, wpn, int32(msg.Id), from) {
+			log.Println("Game2Earn : tir refusé (arme, cadence ou départ) de", client.String())
+			return
+		}
+
 		s.HandleShoot(
 			client,
 			wpn,
@@ -359,6 +373,10 @@ func (s *Server) HandlePacket(client *Client, channelID uint8, message P.Message
 	case P.N_EXPLODE:
 		msg := message.(P.Explode)
 		wpn := weapon.ByID(weapon.ID(msg.Gun))
+		if !s.g2eExplosionPossible(client, wpn, int32(msg.Id)) {
+			log.Println("Game2Earn : explosion sans tir refusée de", client.String())
+			return
+		}
 		s.HandleExplode(client, int32(msg.Cmillis), wpn, int32(msg.Id), mapHits(msg.Hits))
 
 	case P.N_SUICIDE:

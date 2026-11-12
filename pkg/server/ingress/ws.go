@@ -131,7 +131,13 @@ type WSClient struct {
 	disconnect     chan bool
 	send           chan []byte
 	closeSlow      func()
+
+	// Game2Earn : la clé de la place du joueur (?jeton= à la connexion), vide hors d'un match Game2Earn.
+	Jeton string
 }
+
+// Game2Earn : pendant un match, seule une clé de place ouvre une connexion (pkg/server/service/g2e.go).
+var ValiderJeton func(jeton string) bool
 
 func NewWSClient() *WSClient {
 	return &WSClient{
@@ -257,8 +263,9 @@ func (server *WSIngress) RemoveClient(client *WSClient) {
 func (server *WSIngress) HandleLogin(ctx context.Context, client *WSClient, code string) {
 }
 
-func (server *WSIngress) HandleClient(ctx context.Context, c *websocket.Conn, host string, deviceType string) error {
+func (server *WSIngress) HandleClient(ctx context.Context, c *websocket.Conn, host string, deviceType string, jeton string) error {
 	client := NewWSClient()
+	client.Jeton = jeton
 
 	client.deviceType = deviceType
 
@@ -420,6 +427,12 @@ func (server *WSIngress) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	jeton := r.URL.Query().Get("jeton")
+	if ValiderJeton != nil && !ValiderJeton(jeton) {
+		http.Error(w, "place inconnue", http.StatusForbidden)
+		return
+	}
+
 	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		OriginPatterns:  []string{"*"},
 		CompressionMode: websocket.CompressionDisabled,
@@ -449,7 +462,7 @@ func (server *WSIngress) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = server.HandleClient(r.Context(), c, hostname, deviceType)
+	err = server.HandleClient(r.Context(), c, hostname, deviceType, jeton)
 	if errors.Is(err, context.Canceled) {
 		return
 	}
