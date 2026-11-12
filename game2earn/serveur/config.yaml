@@ -1,0 +1,31 @@
+# Game2Earn : réglages du serveur de match (fusionnés avec ceux de Sour, pkg/config/schema.cue).
+# Les modes et le résultat des matchs Game2Earn viendront à l'étape 6 du plan (docs/sour-plan.md de la plateforme).
+server:
+  presets:
+    - name: "ffa-duel"
+      virtual: true
+      config:
+        defaultMode: "ffa"
+        defaultMap: "g2e_essai"
+    - name: "insta-duel"
+      virtual: true
+      config:
+        defaultMode: "insta"
+        defaultMap: "g2e_essai"
+    - name: "default"
+      default: true
+      config:
+        defaultMode: "ffa"
+        defaultMap: "g2e_essai"
+    - name: "ffa"
+      config:
+        defaultMode: "ffa"
+        defaultMap: "g2e_essai"
+        maps:
+          - "g2e_essai"
+    - name: "insta"
+      config:
+        defaultMode: "insta"
+        defaultMap: "g2e_essai"
+        maps:
+          - "g2e_essai"

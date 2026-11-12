@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 concurrency:
   group: game2earn-compilation
@@ -125,3 +126,35 @@ jobs:
           name: sour-game2earn
           path: sour-game2earn.tar.gz
           retention-days: 30
+
+  image:
+    needs: [serveur, contenus]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sour-game2earn
+      - uses: actions/download-artifact@v4
+        with:
+          name: contenus
+          path: paquets
+      - name: L'image du serveur de match
+        run: |
+          tar xzf sour-game2earn.tar.gz ./sour
+          IMAGE="ghcr.io/$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')/g2e-sour-serveur"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          docker build -f game2earn/serveur/Dockerfile -t "$IMAGE:latest" -t "$IMAGE:${GITHUB_SHA::7}" .
+      - name: Essai de démarrage (port d'Edgegap, carte chargée)
+        run: |
+          docker run -d --name essai -e ARBITRIUM_PORT_WEB_INTERNAL=1500 -p 1500:1500 "$IMAGE:latest"
+          for i in $(seq 1 30); do curl -sf -o /dev/null localhost:1500/ && break; sleep 1; done
+          docker logs essai
+          docker logs essai 2>&1 | grep -q "loaded [1-9][0-9]* maps"
+          curl -sf -o /dev/null localhost:1500/ && echo "Le serveur répond."
+      - name: Publication
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:latest"
+          docker push "$IMAGE:${GITHUB_SHA::7}"
