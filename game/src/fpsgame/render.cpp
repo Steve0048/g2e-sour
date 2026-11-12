@@ -374,7 +374,7 @@ namespace game
 
     VARP(hudgun, 0, 1, 1);
     VARP(hudgunsway, 0, 1, 1);
-    VARP(teamhudguns, 0, 1, 1);
+    VARP(teamhudguns, 0, 0, 1); // Game2Earn : une seule couleur d'arme en main
     VARP(chainsawhudgun, 0, 1, 1);
     VAR(testhudgun, 0, 0, 1);
 
@@ -444,9 +444,13 @@ namespace game
             concatstring(gunname, d==player1 || isteam(d->team, player1->team) ? "/blue" : "/red");
         else if(testteam > 1)
             concatstring(gunname, testteam==2 ? "/blue" : "/red");
-        modelattach a[2];
+        modelattach a[3];
         d->muzzle = vec(-1, -1, -1);
         a[0] = modelattach("tag_muzzle", &d->muzzle);
+        // Game2Earn : le modèle de l'arme en main est celui des mains (Red Eclipse) ; l'arme elle-même,
+        // « <hudguns>/<arme>/arme », s'attache à leur tag_weapon et suit leurs animations (game2earn/contenus/modeles.py).
+        defformatstring(armename, "%s/%s/arme", hudgunsdir[0] ? hudgunsdir : mdl.hudguns, guns[d->gunselect].file);
+        a[1] = modelattach("tag_weapon", armename, anim, base);
         dynent *interp = NULL;
         if(d->gunselect==GUN_FIST && chainsawhudgun)
         {

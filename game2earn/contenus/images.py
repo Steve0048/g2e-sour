@@ -415,8 +415,8 @@ def icones():
     }
     for nom, p in noms.items():
         sauver(icone(nom, p), f"packages/icons/{nom}.jpg")
-    # les icônes des personnages (remplacées avec les personnages, étape 2)
-    for perso, c in {"mrfixit": GRIS, "snoutx10k": GRIS, "ogro": GRIS, "inky": GRIS, "captaincannon": GRIS}.items():
+    # les icônes des personnages
+    for perso, c in {"g2e_homme": GRIS, "g2e_femme": GRIS}.items():
         sauver(icone(perso, "personnage", c), f"packages/icons/{perso}.jpg")
         sauver(icone(perso, "personnage", BLEU), f"packages/icons/{perso}_blue.jpg")
         sauver(icone(perso, "personnage", ROUGE), f"packages/icons/{perso}_red.jpg")

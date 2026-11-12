@@ -9,7 +9,7 @@ Provenance de chaque fichier (détail des licences : credits.md) :
   - images de l'interface, icônes, effets, ciel, eau : dessinées par images.py (à nous) ;
   - textures des cartes : packs libres de Sauerbraten (trak5 MIT, cloward libre, drakker domaine public, tomek CC BY) ;
   - police : DejaVu (licence Bitstream Vera) ;
-  - sons : Red Eclipse (CC BY-SA 4.0).
+  - sons, personnages, armes : Red Eclipse (CC BY-SA 4.0), adaptés par sons.py et modeles.py.
 Les sources sont téléchargées à des versions fixées (SAUER, RE_SONS) et gardées dans le cache.
 """
 import argparse
@@ -21,6 +21,7 @@ from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
+import modeles  # noqa: E402
 import sons  # noqa: E402
 
 DEPOT = ICI.parent.parent  # le dépôt g2e-sour
@@ -183,11 +184,14 @@ def fabriquer(racine, cache):
     copier(re_sons / "readme.txt", racine / "packages/sounds/re/readme.txt")
     copier(re_sons / "cc-by-sa.txt", racine / "packages/sounds/re/cc-by-sa.txt")
 
-    # 5. cartes (cartes/ : faites dans l'éditeur ou par carte_essai.py, éclairage calculé)
+    # 5. personnages, armes, objets (Red Eclipse, adaptés)
+    modeles.modeles(racine, cache)
+
+    # 6. cartes (cartes/ : faites dans l'éditeur ou par carte_essai.py, éclairage calculé)
     for carte in sorted((ICI / "cartes").glob("*")):
         copier(carte, racine / "packages/base" / carte.name)
 
-    # 6. crédits
+    # 7. crédits
     copier(ICI / "credits.md", racine / "credits.md")
 
     n = sum(1 for f in racine.rglob("*") if f.is_file())
