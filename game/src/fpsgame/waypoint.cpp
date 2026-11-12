@@ -763,7 +763,7 @@ namespace ai
         wpvus.clear();
         wpfile.setsize(0);
         clearwpcache();
-        conoutf("Game2Earn : %d points de passage créés", waypoints.length() - 1);
+        conoutf("Game2Earn : %d points de passage", waypoints.length() - 1);
     }
     ICOMMAND(genwaypoints, "", (), genwaypoints());
 

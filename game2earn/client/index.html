@@ -17,7 +17,7 @@
     <script>
       // Game2Earn : la page du jeu dans la plateforme (game2earn/client/index.html du dépôt g2e-sour).
       // Les paquets du jeu sont à côté (assets/) ; les cartes dessinées par l'admin sont publiées à part
-      // (/v1/jeux/sour/v/cartes/<carte>/carte.source), leur liste vient de la fiche du jeu.
+      // (/v1/jeux/sour/v/cartes/<carte>-<version>/carte.source), leur liste vient de la fiche du jeu.
       var G2E = { integre: window.parent !== window, cartes: [], editeur: /[?&]editeur=1/.test(location.search) }
       var INJECTED_SOUR_CONFIG = { assets: ['assets/.index.source'], servers: [], proxy: '', menuOptions: '' }
       try {
@@ -28,7 +28,7 @@
           var cartes = (JSON.parse(xhr.responseText).jeu || {}).cartes || []
           G2E.cartes = cartes
           cartes.forEach(function (c) {
-            if (c.admin) INJECTED_SOUR_CONFIG.assets.push('/v1/jeux/sour/v/cartes/' + encodeURIComponent(c.id) + '/carte.source')
+            if (c.admin && c.v) INJECTED_SOUR_CONFIG.assets.push('/v1/jeux/sour/v/cartes/' + encodeURIComponent(c.id + '-' + c.v) + '/carte.source')
           })
         }
       } catch (e) {

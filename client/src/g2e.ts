@@ -19,6 +19,9 @@ declare const BananaBread: { execute: (s: string) => void }
 declare const Module: any
 
 const SOURCE_JEU = 'g2e-jeu'
+
+/** Le système de fichiers du moteur (Emscripten l'expose en global). */
+const fs = (): any => (window as any).FS ?? Module.FS
 const SOURCE_PLATEFORME = 'g2e-plateforme'
 
 /** Les cartes du jeu (celles des paquets du jeu) ; les cartes de l'admin viennent de la fiche du jeu. */
@@ -35,8 +38,11 @@ let horsLigne = false
 let carteAttendue: string | null = null
 let bots = 0
 
+/** Qui pilote la page : la plateforme (cadre), ou le dashboard qui a ouvert l'éditeur dans un onglet. */
+const pilote = (): Window | null => (g2eEditeur() && window.opener != null ? (window.opener as Window) : window.parent !== window ? window.parent : null)
+
 function envoyer(message: Record<string, unknown>, transfert: Transferable[] = []) {
-  if (window.parent !== window) window.parent.postMessage({ source: SOURCE_JEU, ...message }, '*', transfert)
+  pilote()?.postMessage({ source: SOURCE_JEU, ...message }, '*', transfert)
 }
 
 function message(texte: string) {
@@ -110,7 +116,7 @@ export function g2eMenus(): string {
 
 if (typeof G2E !== 'undefined') {
   window.addEventListener('message', (e) => {
-    if (e.source !== window.parent) return
+    if (e.source !== window.parent && (e.source == null || e.source !== pilote())) return
     const m = e.data
     if (m == null || typeof m !== 'object') return
     if (m.source === SOURCE_PLATEFORME) {
@@ -130,11 +136,25 @@ if (typeof G2E !== 'undefined') {
   for (const type of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(type, reprendre, true)
 }
 
+/**
+ * Pose nos menus. Le moteur lit les fichiers en UTF-8 (loadfile), mais pas le texte passé à execute : les accents
+ * passent donc par un fichier.
+ */
+export function g2ePoserMenus() {
+  try {
+    if (!fs().analyzePath('/g2e').exists) fs().mkdir('/g2e')
+    fs().writeFile('/g2e/menus.cfg', g2eMenus())
+    executer('exec g2e/menus.cfg')
+  } catch (e) {
+    console.error('Game2Earn : menus non posés', e)
+  }
+}
+
 /** Le moteur est prêt (paquets chargés, menus posés). */
 export function g2eSurPret() {
   if (!g2eActif()) return
   pret = true
-  executer(g2eMenus())
+  g2ePoserMenus()
   if (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent)) executer('g2e_qualite_basse = 1; g2e_qualite')
   if (g2eEditeur()) {
     ouvrirEditeur()
@@ -254,7 +274,7 @@ function ouvrirEditeur() {
 function lireFichier(chemins: string[]): Uint8Array | null {
   for (const c of chemins) {
     try {
-      const d = Module.FS.readFile(c) as Uint8Array
+      const d = fs().readFile(c) as Uint8Array
       if (d != null && d.length > 0) return d
     } catch (e) {
       // essai suivant

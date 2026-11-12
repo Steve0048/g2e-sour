@@ -1,6 +1,6 @@
 import styled from '@emotion/styled'
 import { demarrerManette } from './manette'
-import { g2eActif, g2eEditeur, g2eMenus, g2eSurCarte, g2eSurConnecteur, g2eSurPret } from './g2e'
+import { g2eActif, g2eEditeur, g2ePoserMenus, g2eSurCarte, g2eSurConnecteur, g2eSurPret } from './g2e'
 import { useResizeDetector } from 'react-resize-detector'
 import start from './unsafe-startup'
 import CBOR from 'cbor-js'
@@ -410,7 +410,7 @@ function App() {
 
     // Game2Earn : nos menus, en français et réduits (g2e.ts).
     if (g2eActif()) {
-      BananaBread.execute(g2eMenus())
+      g2ePoserMenus()
       return
     }
 
