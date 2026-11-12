@@ -458,7 +458,9 @@ def particules():
     sauver(img.filter(ImageFilter.GaussianBlur(4)), P + "blood.png")
     # impact de balle
     n = 256
-    sauver(rgb_de(radial(n, 2.5), (255, 255, 255)), P + "bullet.png")
+    # impact de balle : décalque « surexposé » (engine/decal.cpp, DF_OVERBRIGHT) : 128 = mur inchangé, plus sombre = trou
+    trou = 0.5 - 0.42 * radial(n, 1.5, 0.0) * (radial(n, 1.0) > 0.55) - 0.12 * radial(n, 2.0)
+    sauver(gris(np.clip(trou, 0, 1)).convert("RGB"), P + "bullet.png")
     # explosion, flammes, fumée, vapeur
     sauver(rgb_de(radial(n, 1.0) * (0.5 + 0.5 * bruit(n, (4, 8, 16), 3)), (255, 170, 80)), P + "explosion.png")
     fl = Image.new("L", (256, 256), 0)

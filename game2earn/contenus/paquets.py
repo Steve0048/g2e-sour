@@ -1,21 +1,28 @@
 """Game2Earn : fait les paquets du jeu pour le navigateur et le serveur, à partir du dossier « racine ».
 
-    python3 -I paquets.py <racine> <sortie>
+    python3 -I paquets.py <racine> <sortie> [<sourdump>]
 
 Même format que les recettes de Sour (assets/package.py), sans Emscripten : chaque fichier est rangé sous le nom de son
 empreinte (sha256), chaque paquet est un fichier « <id>.sour », et l'index « .index.source » (CBOR) les décrit :
   - le mod « base » : tout ce que le jeu charge au démarrage (réglages, interface, textures, sons, police) ;
   - le mod « fps » : les personnages, armes et objets (packages/models) ;
-  - une carte par fichier packages/base/<nom>.ogz (avec <nom>.cfg et son image, s'il y en a).
+  - le mod « textures » : toutes les textures des cartes, pour l'éditeur de l'admin ;
+  - une carte par fichier packages/base/<nom>.ogz (avec <nom>.cfg, son image, et les textures qu'elle utilise :
+    sourdump, l'outil de Sour, cmd/sourdump).
 """
 import hashlib
 import json
 import sys
 from pathlib import Path
 
+import subprocess
+
 import cbor2
 
 AUDIO = {".ogg", ".wav", ".mp3"}
+# textures des cartes : hors du paquet de base ; chaque carte emporte les siennes, l'éditeur les charge toutes (mod
+# « textures »)
+TEXTURES_DES_CARTES = ("packages/trak5/", "packages/cloward/", "packages/tomek/", "packages/drakker/")
 
 
 def empreinte(donnees: bytes) -> str:
@@ -80,9 +87,17 @@ class Paquets:
         id_, _ = self.bundle(chemins)
         self.mods.append({"id": id_, "name": nom, "image": None, "description": description})
 
-    def carte(self, ogz: str):
+    def carte(self, ogz: str, sourdump: str):
         base = ogz[:-4]
         chemins = [ogz] + [base + ext for ext in (".cfg", ".jpg", ".png", ".wpt") if (self.racine / (base + ext)).exists()]
+        # les textures et réglages que la carte utilise vraiment (sourdump lit la carte avec le vrai CubeScript)
+        sortie = subprocess.run([sourdump, "-root", str(self.racine), "dump", "-type", "map", ogz], check=True,
+                                capture_output=True, text=True).stdout
+        for ligne in sortie.splitlines():
+            if "->" in ligne:
+                cible = ligne.split("->")[1].strip()
+                if cible.startswith(TEXTURES_DES_CARTES) and cible not in chemins:
+                    chemins.append(cible)
         id_, assets = self.bundle(chemins)
         ogz_id = next(a[0] for a in assets if a[1] == ogz)
         cfg = (self.racine / (base + ".cfg")).read_bytes() if (self.racine / (base + ".cfg")).exists() else b""
@@ -109,22 +124,24 @@ class Paquets:
             }, f)
 
 
-def faire(racine: Path, sortie: Path):
+def faire(racine: Path, sortie: Path, sourdump: str):
     p = Paquets(racine, sortie)
     tous = sorted(str(f.relative_to(racine)) for f in racine.rglob("*") if f.is_file())
     cartes = [c for c in tous if c.startswith("packages/base/") and c.endswith(".ogz")]
     fichiers_cartes = {c[:-4] + ext for c in cartes for ext in (".ogz", ".cfg", ".jpg", ".png", ".wpt")}
     modeles = [c for c in tous if c.startswith("packages/models/")]
-    base = [c for c in tous if c not in fichiers_cartes and c not in modeles]
+    textures = [c for c in tous if c.startswith(TEXTURES_DES_CARTES)]
+    base = [c for c in tous if c not in fichiers_cartes and c not in modeles and c not in textures]
 
     p.mod("base", "Tout ce que le jeu charge au démarrage (Game2Earn).", base)
     p.mod("fps", "Personnages, armes et objets (Game2Earn).", modeles or ["credits.md"])
+    p.mod("textures", "Toutes les textures des cartes, pour l'éditeur (Game2Earn).", textures)
     for c in cartes:
-        p.carte(c)
+        p.carte(c, sourdump)
     p.index()
     taille = sum(f.stat().st_size for f in sortie.glob("*.sour"))
     print(f"paquets : {len(p.bundles)} ({taille / 1e6:.1f} Mo), cartes : {[m['name'] for m in p.maps]}")
 
 
 if __name__ == "__main__":
-    faire(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())
+    faire(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve(), sys.argv[3] if len(sys.argv) > 3 else "sourdump")

@@ -180,6 +180,20 @@ def elaguer(racine: Path):
             f.unlink()
 
 
+# Versions simplifiées de Red Eclipse (moins de polygones, textures plus petites), pour les téléphones
+LEGER = {
+    "rifle": [("rifle.iqm", "rifle_lod1.iqm"), ("diffuse.png", "diffuse_lod.png"), ("masks.png", "masks_lod.png"),
+              ("normalmap.png", "normalmap_lod.png")],
+    "smg": [("smg.iqm", "smg_lod1.iqm")],
+}
+
+
+def leger(re_nom: str, texte: str) -> str:
+    for avant, apres in LEGER.get(re_nom, []):
+        texte = re.sub(rf"(?<![\w_]){re.escape(avant)}", apres, texte)
+    return texte
+
+
 # Réglages propres à notre moteur, mesurés dans le jeu (game2earn/contenus/essais) : position et taille dans la main
 REGLAGES_EN_MAIN = {"rocket": "mdltrans 1 -2 3\nmdlscale 32\n"}
 
@@ -188,7 +202,7 @@ def armes(racine: Path, re_armes: Path):
     for cube, re_nom in ARMES.items():
         src = re_armes / re_nom
         copier_dossier(src, racine / f"packages/models/g2e/armes/{re_nom}")
-        hwep = (src / "hwep").glob("*.cfg").__next__().read_text()
+        hwep = leger(re_nom, (src / "hwep").glob("*.cfg").__next__().read_text())
         vwep = (src / "vwep").glob("*.cfg").__next__().read_text()
         # vue du joueur : les mains (et leurs variantes d'équipe), l'arme s'y attache
         for nom in (f"g2e/hud/{cube}", f"g2e/hud/{cube}/blue", f"g2e/hud/{cube}/red"):
@@ -206,7 +220,7 @@ def armes(racine: Path, re_armes: Path):
         ecrire_cfg(racine, f"vwep/{cube}", attacher(texte, racine), fmt)
     # munitions : le modèle de l'arme, qui tourne au sol
     for cube, re_nom in MUNITIONS.items():
-        item = (re_armes / re_nom / "item").glob("*.cfg").__next__().read_text()
+        item = leger(re_nom, (re_armes / re_nom / "item").glob("*.cfg").__next__().read_text())
         texte, fmt = convertir(item, f"g2e/armes/{re_nom}/item", {})
         ecrire_cfg(racine, f"ammo/{cube}", texte, fmt)
     # projectiles
