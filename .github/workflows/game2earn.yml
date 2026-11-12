@@ -1,6 +1,7 @@
 # Game2Earn : compile Sour (le moteur de Cube 2 pour le navigateur, le client web et le serveur Go) sans aucun contenu
 # du jeu Sauerbraten : ses cartes, modèles, armes et sons sont sous licences non commerciales (voir game2earn/README.md).
-# Les contenus de Game2Earn (libres, usage commercial permis) seront ajoutés par une recette à part.
+# Les contenus de Game2Earn (libres, usage commercial permis) sont assemblés par le job « contenus »
+# (game2earn/contenus : images dessinées par programme, textures libres, sons de Red Eclipse, crédits).
 name: Compilation Game2Earn
 
 on:
@@ -55,6 +56,30 @@ jobs:
         with:
           name: client
           path: client/dist/*
+
+  contenus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Les contenus du jeu (dossier racine) puis les paquets (.sour et index)
+        run: |
+          pip install pillow==12.0.0 numpy==2.3.4 cbor2==5.7.1
+          cd game2earn/contenus
+          python3 -I fabriquer.py "$RUNNER_TEMP/racine" --cache "$RUNNER_TEMP/cache"
+          python3 -I paquets.py "$RUNNER_TEMP/racine" "$GITHUB_WORKSPACE/paquets"
+          ls -la "$GITHUB_WORKSPACE/paquets" | tail -5
+      - uses: actions/upload-artifact@v4
+        with:
+          name: contenus
+          path: paquets/
+          include-hidden-files: true
+          retention-days: 30
 
   serveur:
     needs: [jeu, client]
