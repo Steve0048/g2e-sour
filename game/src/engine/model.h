@@ -3,7 +3,7 @@ enum { MDL_MD2 = 0, MDL_MD3, MDL_MD5, MDL_OBJ, MDL_SMD, MDL_IQM, NUMMODELTYPES }
 struct model
 {
     char *name;
-    float spinyaw, spinpitch, offsetyaw, offsetpitch;
+    float spinyaw, spinpitch, offsetyaw, offsetpitch, offsetroll; // Game2Earn : offsetroll (mdlroll)
     bool collide, ellipsecollide, shadow, alphadepth, depthoffset;
     float scale;
     vec translate;
@@ -12,7 +12,7 @@ struct model
     float rejectradius, eyeheight, collidexyradius, collideheight;
     int batch;
 
-    model(const char *name) : name(name ? newstring(name) : NULL), spinyaw(0), spinpitch(0), offsetyaw(0), offsetpitch(0), collide(true), ellipsecollide(false), shadow(true), alphadepth(true), depthoffset(false), scale(1.0f), translate(0, 0, 0), bih(0), bbcenter(0, 0, 0), bbradius(-1, -1, -1), bbextend(0, 0, 0), collidecenter(0, 0, 0), collideradius(-1, -1, -1), rejectradius(-1), eyeheight(0.9f), collidexyradius(0), collideheight(0), batch(-1) {}
+    model(const char *name) : name(name ? newstring(name) : NULL), spinyaw(0), spinpitch(0), offsetyaw(0), offsetpitch(0), offsetroll(0), collide(true), ellipsecollide(false), shadow(true), alphadepth(true), depthoffset(false), scale(1.0f), translate(0, 0, 0), bih(0), bbcenter(0, 0, 0), bbradius(-1, -1, -1), bbextend(0, 0, 0), collidecenter(0, 0, 0), collideradius(-1, -1, -1), rejectradius(-1), eyeheight(0.9f), collidexyradius(0), collideheight(0), batch(-1) {}
     virtual ~model() { DELETEA(name); DELETEP(bih); }
     virtual void calcbb(vec &center, vec &radius) = 0;
     virtual void render(int anim, int basetime, int basetime2, const vec &o, float yaw, float pitch, dynent *d, modelattach *a = NULL, const vec &color = vec(0, 0, 0), const vec &dir = vec(0, 0, 0), float transparent = 1) = 0;

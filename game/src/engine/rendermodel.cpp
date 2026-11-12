@@ -207,6 +207,15 @@ void mdlpitch(float *angle)
 
 COMMAND(mdlpitch, "f");
 
+// Game2Earn : rotation autour de l'axe avant du modèle (commande des modèles de Red Eclipse)
+void mdlroll(float *angle)
+{
+    checkmdl;
+    loadingmodel->offsetroll = *angle;
+}
+
+COMMAND(mdlroll, "f");
+
 void mdlshadow(int *shadow)
 {
     checkmdl;

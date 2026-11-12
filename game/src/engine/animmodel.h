@@ -1061,6 +1061,7 @@ struct animmodel : model
             matrixstack[0].transformnormal(vec(axis), axis);
             matrixstack[0].transformnormal(vec(forward), forward);
             if(offsetyaw) matrixstack[0].rotate_around_z(offsetyaw*RAD);
+            if(offsetroll) matrixstack[0].rotate_around_x(offsetroll*RAD);
         }
         else pitch = 0;
 
@@ -1158,6 +1159,7 @@ struct animmodel : model
         m.identity();
         if(offsetyaw) m.rotate_around_z(offsetyaw*RAD);
         if(offsetpitch) m.rotate_around_y(-offsetpitch*RAD);
+        if(offsetroll) m.rotate_around_x(offsetroll*RAD);
     }
 
     void genBIH(vector<BIH::mesh> &bih)

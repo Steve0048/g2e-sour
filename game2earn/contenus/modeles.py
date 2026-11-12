@@ -28,7 +28,7 @@ MUNITIONS = {"shells": "shotgun", "bullets": "smg", "rockets": "rocket", "rround
              "cartridges": "pistol"}
 
 # commandes de Red Eclipse que notre moteur n'a pas
-IGNOREES = re.compile(r"^(mdlcolor|mdlmaterial|mdllodpixels|mdlgloss|mdlmixer|mdlroll|(md5|iqm|obj)(color|material|"
+IGNOREES = re.compile(r"^(mdlcolor|mdlmaterial|mdllodpixels|mdlgloss|mdlmixer|(md5|iqm|obj)(color|material|"
                       r"gloss|envmap|mixertex|hitzone))\b|^objpitch\b")
 
 
@@ -73,8 +73,6 @@ def convertir(texte: str, dossier: str, anims: dict) -> str:
         m = re.match(r"^(md5|iqm|obj)(\w+)\s*(.*)$", ligne)
         if m:
             fmt, cmd, reste = m.groups()
-            if cmd == "pitch" and reste.startswith('""'):
-                continue  # « pas d'inclinaison » : déjà le comportement de notre moteur
             if cmd == "anim":
                 a = re.match(r'^"([^"]*)"\s+(.*)$', reste)
                 nom = anims.get(a.group(1)) if a else None
@@ -114,14 +112,15 @@ iqmdir "g2e/joueur"
 iqmload "hud_hands.iqm"
 iqmtag Weapon tag_weapon
 iqmtag Weapon tag_muzzle
-iqmskin * "hudhandsdiffuse.png" "hudhandsmask.png" 0.25 0.0
+iqmskin * "gants.png" "hudhandsmask.png" 0.25 0.0
 iqmbumpmap * "hudhandsnormal.png"
+iqmpitch "" 1
 iqmanim "gun idle" "{repos}" 5
 iqmanim "gun shoot" "{tir}" {vitesse}
 mdlscale 481.95
 mdltrans -0.22 0.2 -0.22
-mdlyaw 90
 """
+# Red Eclipse tourne ce modèle de 90° (mdlyaw 90) ; notre moteur le fait déjà (fpsgame/render.cpp, d->yaw+90).
 
 
 def armes(racine: Path, re_armes: Path):
@@ -198,9 +197,10 @@ def personnages(racine: Path, re_acteurs: Path):
         shutil.copyfile(src / f, dest / f)
     shutil.copyfile(src / "male/RE_Player_male.iqm", dest / "homme.iqm")
     shutil.copyfile(src / "female/RE_Player_female.iqm", dest / "femme.iqm")
-    for f in ("mask.png", "norm.png", "hudhandsdiffuse.png", "hudhandsmask.png", "hudhandsnormal.png"):
+    for f in ("mask.png", "norm.png", "hudhandsmask.png", "hudhandsnormal.png"):
         shutil.copyfile(src / f, dest / f)
         reduire(dest / f)
+    colorer(src / "hudhandsdiffuse.png", src / "hudhandsmixer.png", COULEURS[""], dest / "gants.png")
     for nom, c in COULEURS.items():
         colorer(src / "diffuse.png", src / "mixer.png", c, dest / f"peau{('_' + nom) if nom else ''}.png")
     shutil.copyfile(src / "ragdoll.cfg", dest / "ragdoll.cfg")

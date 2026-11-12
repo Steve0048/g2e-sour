@@ -22,6 +22,7 @@ from pathlib import Path
 ICI = Path(__file__).resolve().parent
 sys.path.insert(0, str(ICI))
 import modeles  # noqa: E402
+import objets  # noqa: E402
 import sons  # noqa: E402
 
 DEPOT = ICI.parent.parent  # le dépôt g2e-sour
@@ -186,6 +187,7 @@ def fabriquer(racine, cache):
 
     # 5. personnages, armes, objets (Red Eclipse, adaptés)
     modeles.modeles(racine, cache)
+    objets.objets(racine)
 
     # 6. cartes (cartes/ : faites dans l'éditeur ou par carte_essai.py, éclairage calculé)
     for carte in sorted((ICI / "cartes").glob("*")):
