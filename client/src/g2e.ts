@@ -197,7 +197,8 @@ function regler(actif: boolean) {
 }
 
 function cartes(): string[] {
-  const admin = (G2E?.cartes ?? []).map((c) => c.id)
+  // Seulement les cartes qu'on peut charger : celles du jeu, et celles de l'admin publiées (avec leur version).
+  const admin = (G2E?.cartes ?? []).filter((c) => c.admin && (c as Carte & { v?: string }).v).map((c) => c.id)
   const toutes = [...CARTES_DU_JEU, ...admin.filter((c) => !CARTES_DU_JEU.includes(c))]
   return toutes
 }
