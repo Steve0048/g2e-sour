@@ -158,3 +158,32 @@ jobs:
           echo "${{ github.token }}" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker push "$IMAGE:latest"
           docker push "$IMAGE:${GITHUB_SHA::7}"
+
+  # La version compilée du jeu pour le navigateur (client web, moteur, paquets) est publiée en « release »
+  # (client-web.tar.gz), téléchargée et vérifiée par Game2Earn à la publication du jeu (Jeux/sour de la plateforme).
+  publication:
+    needs: [image]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sour-game2earn
+      - uses: actions/download-artifact@v4
+        with:
+          name: contenus
+          path: client/assets
+      - name: Publier la version (release)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tar xzf sour-game2earn.tar.gz ./site
+          mv site/* client/
+          VERSION="client-${{ github.run_number }}-${GITHUB_SHA::7}"
+          tar -czf client-web.tar.gz -C client .
+          sha256sum client-web.tar.gz | tee client-web.tar.gz.sha256
+          gh release create "$VERSION" client-web.tar.gz client-web.tar.gz.sha256 \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Client web Game2Earn $VERSION" \
+            --notes "Sour (Cube 2) pour Game2Earn : client web, moteur et paquets du jeu (contenus libres, voir game2earn/contenus/credits.md), branche game2earn ($GITHUB_SHA)."
+          echo "Version publiée : $VERSION"
