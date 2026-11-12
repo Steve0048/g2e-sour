@@ -1,0 +1,94 @@
+# Game2Earn : compile Sour (le moteur de Cube 2 pour le navigateur, le client web et le serveur Go) sans aucun contenu
+# du jeu Sauerbraten : ses cartes, modèles, armes et sons sont sous licences non commerciales (voir game2earn/README.md).
+# Les contenus de Game2Earn (libres, usage commercial permis) seront ajoutés par une recette à part.
+name: Compilation Game2Earn
+
+on:
+  push:
+    branches: [game2earn]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: game2earn-compilation
+  cancel-in-progress: true
+
+jobs:
+  jeu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Emscripten (la version du projet)
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git
+          cd emsdk && ./emsdk install 3.1.8 && ./emsdk activate 3.1.8
+      - name: Le moteur pour le navigateur
+        run: |
+          source emsdk/emsdk_env.sh
+          cd game && ./build
+          ls -la dist/game
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jeu
+          path: game/dist/game/*
+
+  client:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "14.17.5"
+      - name: Le client web
+        run: |
+          cd client
+          yarn install
+          yarn build
+          cp src/index.html src/favicon.ico src/background.png dist/
+          ls -la dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client
+          path: client/dist/*
+
+  serveur:
+    needs: [jeu, client]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: client
+          path: pkg/server/static/site
+      - uses: actions/download-artifact@v4
+        with:
+          name: jeu
+          path: pkg/server/static/site/game
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+      - name: SWIG 4.1.1 (une version plus récente change les types générés)
+        run: pip install "swig==4.1.1" && swig -version | sed -n 2p
+      - name: enet
+        run: cd pkg/enet/enet && make
+      - name: Le serveur (client et moteur intégrés)
+        run: |
+          go build -tags "release embed_frontend" -ldflags "-w -s" -o sour ./cmd/sour
+          ./sour config > /dev/null && echo "Le serveur démarre et lit sa configuration."
+          ls -la sour
+      - name: Archive
+        run: |
+          mkdir -p paquet && cp sour paquet/ && cp -r pkg/server/static/site paquet/site
+          tar -czf sour-game2earn.tar.gz -C paquet .
+          sha256sum sour-game2earn.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sour-game2earn
+          path: sour-game2earn.tar.gz
+          retention-days: 30
