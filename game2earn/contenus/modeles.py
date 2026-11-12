@@ -139,7 +139,8 @@ MAINS = {
     "fist": ("hud_sword-idle.iqm", "hud_sword-attack1.iqm", 60),
     "shotg": ("hud_shotgun-idle.iqm", "hud_shotgun-shoot1.iqm", 25),
     "chaing": ("hud_smg-idle.iqm", "hud_smg-shoot1.iqm", 60),
-    "rocket": ("hud_rocket-idle.iqm", "hud_rocket-idle.iqm", 1),
+    # lance-roquettes : Red Eclipse le pose sur l'épaule (hud_rocket-idle) ; tenu comme le fusil à pompe, il se lit mieux
+    "rocket": ("hud_shotgun-idle.iqm", "hud_shotgun-shoot1.iqm", 25),
     "rifle": ("hud_rifle-idle.iqm", "hud_rifle-shoot.iqm", 60),
     "gl": ("hud_grenade-idle.iqm", "hud_grenade-shoot.iqm", 22),
     "pistol": ("hud_pistol-idle.iqm", "hud_pistol-shoot.iqm", 40),
@@ -179,6 +180,10 @@ def elaguer(racine: Path):
             f.unlink()
 
 
+# Réglages propres à notre moteur, mesurés dans le jeu (game2earn/contenus/essais) : position et taille dans la main
+REGLAGES_EN_MAIN = {"rocket": "mdltrans 1 -2 3\nmdlscale 32\n"}
+
+
 def armes(racine: Path, re_armes: Path):
     for cube, re_nom in ARMES.items():
         src = re_armes / re_nom
@@ -190,6 +195,10 @@ def armes(racine: Path, re_armes: Path):
             ecrire_cfg(racine, nom, mains(cube), "iqm")
         texte, fmt = convertir(hwep, f"g2e/armes/{re_nom}/hwep",
                                {re_nom: "gun idle", f"{re_nom} primary": "gun shoot"})
+        if cube in REGLAGES_EN_MAIN:
+            texte = "\n".join(l for l in texte.splitlines()
+                              if not l.startswith(("mdltrans", "mdlscale", "mdlpitch", "mdlroll", "mdlyaw"))) + "\n"
+            texte += REGLAGES_EN_MAIN[cube]
         ecrire_cfg(racine, f"g2e/hud/{cube}/arme", attacher(texte, racine), fmt)
         # arme portée par les autres joueurs
         texte, fmt = convertir(vwep, f"g2e/armes/{re_nom}/vwep",
