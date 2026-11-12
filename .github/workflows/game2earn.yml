@@ -181,6 +181,8 @@ jobs:
         run: |
           tar xzf sour-game2earn.tar.gz ./site
           mv site/* client/
+          # La plateforme ne publie pas les fichiers cachés : l'index des paquets aussi sous un nom visible.
+          cp client/assets/.index.source client/assets/index.source
           VERSION="client-${{ github.run_number }}-${GITHUB_SHA::7}"
           tar -czf client-web.tar.gz -C client .
           sha256sum client-web.tar.gz | tee client-web.tar.gz.sha256

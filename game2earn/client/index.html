@@ -19,7 +19,7 @@
       // Les paquets du jeu sont à côté (assets/) ; les cartes dessinées par l'admin sont publiées à part
       // (/v1/jeux/sour/v/cartes/<carte>-<version>/carte.source), leur liste vient de la fiche du jeu.
       var G2E = { integre: window.parent !== window, cartes: [], editeur: /[?&]editeur=1/.test(location.search) }
-      var INJECTED_SOUR_CONFIG = { assets: ['assets/.index.source'], servers: [], proxy: '', menuOptions: '' }
+      var INJECTED_SOUR_CONFIG = { assets: ['assets/index.source'], servers: [], proxy: '', menuOptions: '' }
       try {
         var xhr = new XMLHttpRequest()
         xhr.open('GET', '/v1/jeux/sour', false)
